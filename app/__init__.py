@@ -6,34 +6,42 @@ import os
 import json
 import tempfile
 
-records = {
-    "metadata" : {
-        "info": [],
-        "column_descriptions": [],
-        },
-    "columns": [],
-    "readings": [],
-}
-metadata = records["metadata"]
-columns = records["columns"]
-readings = records["readings"]
-rows = []
 app = Flask(__name__)                                                                                                                                                                           
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def catch_all(path):
-    global records
 
     result = None
+    example = 'p_LD0027_24308_20190801T000000_20191031T235959.csv'
     if not path:
-        # Return all codes
-        result = records
+        result = []
+        filenames = os.listdir('data/req_20190801T000000_20191031T235959_csv')
+        for filename in filenames:
+            if len(filename) == len(example) and filename.startswith('p_') and filename.endswith('.csv'):
+                segments = example.split('_')
+                site = segments[1]
+                sensor = segments[2]
+                result.append({
+                    "link": f'{site}_{sensor}',
+                    "site": site,
+                    "sensor": sensor,
+                })
     else:
-        # Return a requested code
-        for reading in records["readings"]:
-            if path.lower() == reading.get("time").lower():
-                result = reading
+        filenames = os.listdir('data/req_20190801T000000_20191031T235959_csv')
+        for filename in filenames:
+            if len(filename) == len(example) and filename.startswith('p_') and filename.endswith('.csv'):
+                if filename.startswith(f'p_{path}'):
+                    result = parse(filename)
+                    # segments = path.split('_')
+                    # site = segments[0]
+                    # sensor = segments[1]
+                    # result = {
+                    #     "filename": filename,
+                    #     "link": f'{site}_{sensor}',
+                    #     "site": site,
+                    #     "sensor": sensor,
+                    # }
     
     if not result:
         # Not found
@@ -58,7 +66,7 @@ def describe_column(fields, values):
         result[val] = values[idx]
     return result
 
-def nest_metadata(key, value):
+def nest_metadata(key, value, metadata):
     path = key.split('.')
     print(path)
     pos = 0
@@ -70,81 +78,94 @@ def nest_metadata(key, value):
         current = current[path[pos]]
         pos += 1
     current[path[pos]] = value
-        
 
-with open("data/req_20190801T000000_20191031T235959_csv/p_LD0057_24319_20190801T000000_20191031T235959.csv", 'r') as csvfile:
-    line = csvfile.readline()
-    while line:
+def parse(filename):
 
-        if line.startswith('#'):
+    records = {
+        "metadata" : {
+            "info": [],
+            "column_descriptions": [],
+            },
+        "columns": [],
+        "readings": [],
+    }
+    metadata = records["metadata"]
+    columns = records["columns"]
+    readings = records["readings"]
+    rows = []
 
-            # Parse header lines
-            print(f"Header: {line}")
-
-            if line.startswith('# Begin CSV table for '):
-                metadata["info"].append(line.replace('# Begin CSV table for ', '').strip())
-            else:
-                # "# key: value"
-                match = re.search('#\\s([^\\s^:]+):\\s*(.*)', line)
-                if match:
-                    key = match.group(1)
-                    value = match.group(2)
-                    if key == 'ColDescription':
-                        column_fields = parse_descriptions(value)
-                        print(f"Column description fields: {column_fields}")
-                    else:
-                        path = key.split('.')
-                        if len(path) == 1:
-                            metadata[key] = value
-                        else:
-                            nest_metadata(key, value)
-                        print(f'Metadata: {key} : {value}')
-
-                # "# Column_1 / ... / ..."
-                match = re.search('#\\sColumn_(\\d)\\s/\\s(.*)', line)
-                if match:
-                    column_number = match.group(1)
-                    column_description = parse_descriptions(match.group(2))
-                    column = describe_column(column_fields, column_description)
-                    metadata["column_descriptions"].append(column)
-                    # We'll use this as headers for parsing the data rows:
-                    columns.append(column["name"])
-                    print(f"Column {column_number}: {column}")
-
-        else:
-
-            # Collect data rows
-            rows.append(line)
-
+    with open(f"data/req_20190801T000000_20191031T235959_csv/{filename}", 'r') as csvfile:
         line = csvfile.readline()
+        while line:
 
-    print(f"Metadata: {metadata}")
-    print(f"Columns: {columns}")
-    print(f"Number of rows: {len(rows)}")
+            if line.startswith('#'):
 
-# Write out a clean csv:
+                # Parse header lines
+                print(f"Header: {line}")
 
-with tempfile.NamedTemporaryFile(delete=False) as temp:
-    tempfilename = temp.name
+                if line.startswith('# The Urban Flows Observatory Sheffield'):
+                    metadata["info"].append(line[2:].strip())
+                else:
+                    # "# key: value"
+                    match = re.search('#\\s([^\\s^:]+):\\s*(.*)', line)
+                    if match:
+                        key = match.group(1)
+                        value = match.group(2)
+                        if key == 'ColDescription':
+                            column_fields = parse_descriptions(value)
+                            print(f"Column description fields: {column_fields}")
+                        else:
+                            path = key.split('.')
+                            if len(path) == 1:
+                                metadata[key] = value
+                            else:
+                                nest_metadata(key, value, metadata)
+                            print(f'Metadata: {key} : {value}')
 
-with open(tempfilename, 'w') as csvfile:
-    fieldnames = ['first_name', 'last_name']
-    writer = csv.DictWriter(csvfile, fieldnames=columns)
-    writer.writeheader()
+                    # "# Column_1 / ... / ..."
+                    match = re.search('#\\sColumn_(\\d)\\s/\\s(.*)', line)
+                    if match:
+                        column_number = match.group(1)
+                        column_description = parse_descriptions(match.group(2))
+                        column = describe_column(column_fields, column_description)
+                        metadata["column_descriptions"].append(column)
+                        # We'll use this as headers for parsing the data rows:
+                        columns.append(column["name"])
+                        print(f"Column {column_number}: {column}")
 
-with open(tempfilename, 'a') as csvfile:
-    csvfile.writelines(rows)
-rows = None
+            else:
 
-# Read the clean csv:
+                # Collect data rows
+                rows.append(line)
 
-with open(tempfilename) as csvfile:
-    reader = csv.DictReader(csvfile)
-    for row in reader:
-        #if len(readings)<100:
-        readings.append(row)
+            line = csvfile.readline()
 
-print("Parsed.")
+        print(f"Metadata: {metadata}")
+        print(f"Columns: {columns}")
+        print(f"Number of rows: {len(rows)}")
+
+    # Write out a clean csv:
+
+    with tempfile.NamedTemporaryFile(delete=False) as temp:
+        tempfilename = temp.name
+
+    with open(tempfilename, 'w') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=columns)
+        writer.writeheader()
+
+    with open(tempfilename, 'a') as csvfile:
+        csvfile.writelines(rows)
+    rows = None
+
+    # Read the clean csv:
+
+    with open(tempfilename) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            #if len(readings)<100:
+            readings.append(row)
+    
+    return records
 
 if __name__ == '__main__':
     #app.run(host='0.0.0.0')
