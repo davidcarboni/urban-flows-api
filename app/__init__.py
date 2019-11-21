@@ -58,6 +58,20 @@ def describe_column(fields, values):
         result[val] = values[idx]
     return result
 
+def nest_metadata(key, value):
+    path = key.split('.')
+    print(path)
+    pos = 0
+    leaf = len(path) - 1
+    current = metadata
+    while pos < leaf:
+        if not current.get(path[pos]):
+            metadata[path[pos]] = {}
+        current = current[path[pos]]
+        pos += 1
+    current[path[pos]] = value
+        
+
 with open("req_20190801T000000_20191031T235959_csv/p_LD0057_24319_20190801T000000_20191031T235959.csv", 'r') as csvfile:
     line = csvfile.readline()
     while line:
@@ -79,7 +93,11 @@ with open("req_20190801T000000_20191031T235959_csv/p_LD0057_24319_20190801T00000
                         column_fields = parse_descriptions(value)
                         print(f"Column description fields: {column_fields}")
                     else:
-                        metadata[key] = value
+                        path = key.split('.')
+                        if len(path) == 1:
+                            metadata[key] = value
+                        else:
+                            nest_metadata(key, value)
                         print(f'Metadata: {key} : {value}')
 
                 # "# Column_1 / ... / ..."
@@ -123,6 +141,7 @@ rows = None
 with open(tempfilename) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
+        #if len(readings)<100:
         readings.append(row)
 
 print("Parsed.")
