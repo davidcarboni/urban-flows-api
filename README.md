@@ -1,8 +1,17 @@
+# Urban Flows Hack API
 
+## Data index
 
-https://github.com/fsadata/approved-food-establishments/blob/gh-pages/data/approved-food-establishments-as-at-1-november-2019.csv
+Head to: 
 
-https://github.com/fsadata/approved-food-establishments
+http://urban-flows-api.herokuapp.com
 
-https://fsadata.github.io/approved-food-establishments/
+## Readings data
 
+Try:
+
+http://urban-flows-api.herokuapp.com/LD0057_24320
+
+Also try:
+
+http://urban-flows-api.herokuapp.com/LD0057_24320?tmax=1572465829&tmin=1571465829
