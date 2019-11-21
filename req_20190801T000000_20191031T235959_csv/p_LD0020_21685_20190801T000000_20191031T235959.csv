@@ -1,0 +1,21 @@
+# Begin CSV table for pair LD0020|21685
+# The Urban Flows Observatory Sheffield @ 2019-11-14 09:46:29.979460
+# From: 2019-08-01T00:00:00
+# To: 2019-10-31T23:59:59
+# site.id: LD0020
+# site.longitude: -1.52600771015 [deg]
+# site.latitude: 53.3779350836 [deg]
+# site.heightAboveSeaLevel: 254.5 [m]
+# sensor.id: 21685
+# sensor.heightAboveGround: 3.99 [m]
+# sensor.distanceToWall: 0.1 [m]
+# sensor.family: luftdaten
+# sensor.detectors: luftdaten
+# ColDescription: name / units / UCD / description / type / minVal / maxVal / Avge / last / no-data-value 
+# Column_1 / time / s / TIME_UTC_UNIX / Time in seconds since 1970.0, or UNIX time / utime / 1565249705 / 1565249705 / 1565249705 / 1565249705 / -32768
+# Column_2 / sensor /  / ID_MAIN / Sensor identifier / int / 21685 / 21685 / 21685 / 21685 / -32768
+# Column_3 / PM2.5 / ug/m3 / AQ_PM25 / Particulate material less than 2.5 microns in diameter / float / 3.86999988556 / 3.86999988556 / 3.86999988556 / 3.86999988556 / -32768
+# Column_4 / PM10 / ug/m3 / AQ_PM10 / Particulate material less than 10 microns in diameter / float / 1.76999998093 / 1.76999998093 / 1.76999998093 / 1.76999998093 / -32768
+# Number of points 1
+1565249705,21685,3.87,1.77
+# End CSV table for pair LD0020|21685
