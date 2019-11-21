@@ -72,7 +72,7 @@ def nest_metadata(key, value):
     current[path[pos]] = value
         
 
-with open("req_20190801T000000_20191031T235959_csv/p_LD0057_24319_20190801T000000_20191031T235959.csv", 'r') as csvfile:
+with open("data/req_20190801T000000_20191031T235959_csv/p_LD0057_24319_20190801T000000_20191031T235959.csv", 'r') as csvfile:
     line = csvfile.readline()
     while line:
 
