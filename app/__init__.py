@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, abort, current_app
+from flask import Flask, request, jsonify, abort, current_app
 from werkzeug.utils import secure_filename
 import csv
 import re
@@ -6,6 +6,7 @@ import os
 import json
 import tempfile
 
+files = []
 app = Flask(__name__)                                                                                                                                                                           
 
 @app.route('/', defaults={'path': ''})
@@ -15,33 +16,35 @@ def catch_all(path):
     result = None
     example = 'p_LD0027_24308_20190801T000000_20191031T235959.csv'
     if not path:
-        result = []
-        filenames = os.listdir('data/req_20190801T000000_20191031T235959_csv')
-        for filename in filenames:
-            if len(filename) == len(example) and filename.startswith('p_') and filename.endswith('.csv'):
-                segments = example.split('_')
-                site = segments[1]
-                sensor = segments[2]
-                result.append({
-                    "link": f'{site}_{sensor}',
-                    "site": site,
-                    "sensor": sensor,
-                })
+        result = files
     else:
         filenames = os.listdir('data/req_20190801T000000_20191031T235959_csv')
         for filename in filenames:
             if len(filename) == len(example) and filename.startswith('p_') and filename.endswith('.csv'):
                 if filename.startswith(f'p_{path}'):
                     result = parse(filename)
-                    # segments = path.split('_')
-                    # site = segments[0]
-                    # sensor = segments[1]
-                    # result = {
-                    #     "filename": filename,
-                    #     "link": f'{site}_{sensor}',
-                    #     "site": site,
-                    #     "sensor": sensor,
-                    # }
+
+                    tmax = request.args.get('tmax')
+                    if tmax:
+                        max=int(tmax)
+                        filtered = []
+                        for record in result["readings"]:
+                            time = int(record["time"])
+                            if time <= max:
+                                filtered.append(record)
+                        result["readings"] = filtered
+
+                    tmin = request.args.get('tmin')
+                    if tmin:
+                        min=int(tmin)
+                        filtered = []
+                        for record in result["readings"]:
+                            time = int(record["time"])
+                            if time >= min:
+                                filtered.append(record)
+                        result["readings"] = filtered
+
+                    result["metadata"]["count"] = len(result["readings"])
     
     if not result:
         # Not found
@@ -80,7 +83,7 @@ def nest_metadata(key, value, metadata):
     current[path[pos]] = value
 
 def parse(filename):
-
+    """ Parses a CSV file """
     records = {
         "metadata" : {
             "info": [],
@@ -166,6 +169,37 @@ def parse(filename):
             readings.append(row)
     
     return records
+
+def range(records):
+    """ Computes that tmin and tmax of all record times. """
+    readings = records["readings"]
+    max = int(readings[0]["time"])
+    min = int(readings[0]["time"])
+    for reading in readings:
+        time = int(reading["time"])
+        if time < min:
+            min = time
+        if time > max:
+            max = time
+    return {"tmin": min, "tmax": max}
+
+
+# Parse and cache file info, because this takes a while to compute
+
+example = 'p_LD0027_24308_20190801T000000_20191031T235959.csv'
+filenames = os.listdir('data/req_20190801T000000_20191031T235959_csv')
+for filename in filenames:
+    if len(filename) == len(example) and filename.startswith('p_') and filename.endswith('.csv'):
+        segments = filename.split('_')
+        records = parse(filename)
+        site = records["metadata"]["site"]["id"]
+        sensor = records["metadata"]["sensor"]["id"]
+        files.append({
+            "link": f'{segments[1]}_{segments[2]}?tmax=&tmin=',
+            "site": site,
+            "sensor": sensor,
+            "range": range(records)
+        })
 
 if __name__ == '__main__':
     #app.run(host='0.0.0.0')
